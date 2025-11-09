@@ -32,16 +32,16 @@ class LayerValidator:
     def compare_tensors(self, ref_tensor, cpp_tensor, layer_name):
         """Compare two tensors with detailed analysis"""
         if ref_tensor is None:
-            print(f"❌ {layer_name}: Reference tensor not found")
+            print(f"{layer_name}: Reference tensor not found")
             return False
             
         if cpp_tensor is None:
-            print(f"❌ {layer_name}: C++ tensor not found")
+            print(f"{layer_name}: C++ tensor not found")
             return False
         
         # Shape check
         if ref_tensor.shape != cpp_tensor.shape:
-            print(f"❌ {layer_name}: Shape mismatch")
+            print(f"{layer_name}: Shape mismatch")
             print(f"   Reference: {ref_tensor.shape}")
             print(f"   C++:       {cpp_tensor.shape}")
             return False
@@ -69,7 +69,8 @@ class LayerValidator:
         # Check tolerance
         passed = max_diff < self.tolerance
         
-        print(f"{'✅' if passed else '❌'} {layer_name}:")
+        status = "[OK]" if passed else "[FAIL]"
+        print(f"{status} {layer_name}:")
         print(f"   Shape: {ref_tensor.shape}")
         print(f"   Max diff: {max_diff:.2e}")
         print(f"   Mean diff: {mean_diff:.2e}")
@@ -104,7 +105,7 @@ class LayerValidator:
             'final_output'
         ]
         
-        print("🔍 Validating C++ implementation against Python reference...\n")
+        print("Validating C++ implementation against Python reference...\n")
         
         passed_count = 0
         total_count = 0
@@ -124,7 +125,7 @@ class LayerValidator:
                 print()
         
         # Summary
-        print(f"📊 Validation Summary:")
+        print(f"Validation Summary:")
         print(f"   Passed: {passed_count}/{total_count}")
         print(f"   Success rate: {passed_count/total_count*100:.1f}%" if total_count > 0 else "   No tests run")
         
@@ -143,7 +144,7 @@ class LayerValidator:
 
 def generate_test_data():
     """Generate simple test data for initial validation"""
-    print("🎲 Generating test data...")
+    print("Generating test data...")
     
     # Create simple test input (1x3x224x224)
     np.random.seed(42)  # Reproducible
@@ -155,7 +156,7 @@ def generate_test_data():
     with open('test_data/test_input_shape.txt', 'w') as f:
         f.write(' '.join(map(str, test_input.shape)))
     
-    print(f"✅ Test input saved: {test_input.shape}")
+    print(f"Test input saved: {test_input.shape}")
     return test_input
 
 if __name__ == "__main__":

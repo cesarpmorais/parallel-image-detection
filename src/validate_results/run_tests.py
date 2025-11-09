@@ -11,7 +11,7 @@ from validate import LayerValidator, generate_test_data
 
 def create_simple_test_input():
     """Create a simple test input for initial validation"""
-    print("🎲 Creating simple test input...")
+    print("Creating simple test input...")
     
     # Simple test: all zeros with a few non-zero values
     test_input = torch.zeros(1, 3, 224, 224)
@@ -23,7 +23,7 @@ def create_simple_test_input():
 
 def run_reference_generation():
     """Generate reference outputs using simple test input"""
-    print("🔄 Generating reference outputs...")
+    print("Generating reference outputs...")
     
     # Create reference model
     ref_model = ResNet18Reference()
@@ -39,29 +39,29 @@ def run_reference_generation():
     with open('test_data/input_shape.txt', 'w') as f:
         f.write(' '.join(map(str, test_np.shape)))
     
-    print(f"💾 Test input saved: {test_np.shape}")
+    print(f"Test input saved: {test_np.shape}")
     
     # Generate reference outputs
     with torch.no_grad():
         output = ref_model.forward_with_logging(test_input)
     
-    print("✅ Reference outputs generated!")
+    print("Reference outputs generated!")
     return output
 
 def validate_cpp_implementation():
     """Validate C++ implementation if outputs exist"""
-    print("\n🔍 Checking for C++ outputs...")
+    print("\nChecking for C++ outputs...")
     
     if not os.path.exists('cpp_outputs'):
-        print("❌ cpp_outputs/ directory not found")
-        print("💡 Run your C++ implementation first to generate outputs")
+        print("cpp_outputs/ directory not found")
+        print("Run your C++ implementation first to generate outputs")
         return False
     
     validator = LayerValidator()
     return validator.validate_all_layers()
 
 def main():
-    print("🚀 ResNet18 Test Runner")
+    print("ResNet18 Test Runner")
     print("=" * 50)
     
     # Step 1: Generate reference outputs
@@ -71,7 +71,7 @@ def main():
     probabilities = torch.nn.functional.softmax(output[0], dim=0)
     top5_prob, top5_idx = torch.topk(probabilities, 5)
     
-    print(f"\n🎯 Reference model top 5 predictions:")
+    print(f"\n Reference model top 5 predictions:")
     for i in range(5):
         print(f"  Class {top5_idx[i].item()}: {top5_prob[i].item():.6f}")
     
@@ -80,11 +80,11 @@ def main():
     
     print("\n" + "=" * 50)
     if success:
-        print("🎉 All validations passed!")
+        print("All validations passed!")
     else:
-        print("⚠️  Some validations failed or C++ outputs not found")
+        print("Some validations failed or C++ outputs not found")
     
-    print("\n📋 Next steps:")
+    print("\nNext steps:")
     print("1. Implement C++ layers following docs/implementation_guide.md")
     print("2. Save outputs to cpp_outputs/ directory")
     print("3. Run: python validate.py")

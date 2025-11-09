@@ -23,7 +23,7 @@ class ResNet18Reference:
         """Forward pass with intermediate activation logging"""
         os.makedirs(log_dir, exist_ok=True)
         
-        print("🔍 Forward pass with logging...")
+        print("Forward pass with logging...")
         
         # Input
         self._save_tensor(x, f"{log_dir}/input.bin")
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     test_image_path = "dataset/test_image.jpg"  # You'll need to provide this
     
     if os.path.exists(test_image_path):
-        print(f"📸 Processing: {test_image_path}")
+        print(f"Processing: {test_image_path}")
         
         # Preprocess
         input_tensor = preprocess_image(test_image_path)
@@ -126,12 +126,12 @@ if __name__ == "__main__":
         probabilities = torch.nn.functional.softmax(output[0], dim=0)
         top5_prob, top5_idx = torch.topk(probabilities, 5)
         
-        print("\n🎯 Top 5 predictions:")
+        print("Top 5 predictions:")
         for i in range(5):
             print(f"  {top5_idx[i].item()}: {top5_prob[i].item():.4f}")
             
-        print("\n✅ Reference outputs saved to reference_outputs/")
+        print("\nReference outputs saved to reference_outputs/")
         
     else:
-        print(f"❌ Test image not found: {test_image_path}")
+        print(f"Test image not found: {test_image_path}")
         print("Please add a test image to dataset/test_image.jpg")
