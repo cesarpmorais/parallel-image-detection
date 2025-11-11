@@ -99,3 +99,32 @@ Após executar, valide:
 cd src/validate_results
 python validate.py --layer after_conv1
 ```
+
+
+### Multi-image / batch mode (benchmarking)
+
+The C++ binary now supports processing multiple input files in a single process to avoid repeated startup and weight-loading overhead. This is useful for accurate per-image latency and throughput measurements.
+
+Usage examples:
+
+Process all .bin inputs in a directory:
+```bash
+./cpp/resnet18 --images-dir src/validate_results/test_data
+```
+
+Process up to N images:
+```bash
+./cpp/resnet18 --images-dir src/validate_results/test_data --max-images 100
+```
+
+Repeat each image M times (micro-benchmark) and save final output only once:
+```bash
+./cpp/resnet18 --images-dir src/validate_results/test_data --max-images 10 --repeat 50
+```
+
+Outputs:
+- Per-image timing files: `src/validate_results/cpp_outputs/timings_<image>.csv`
+- Per-image final outputs: `src/validate_results/cpp_outputs/final_output_<image>.bin`
+- For backward compatibility the binary also writes `src/validate_results/cpp_outputs/timings.csv` overwritten with the last processed image's timings.
+
+This mode processes inputs sequentially in a single process and reuses the loaded weights, so wall-time per image approximates true inference time (excluding file I/O). For throughput/batched measurements consider stacking inputs into batches (future work).

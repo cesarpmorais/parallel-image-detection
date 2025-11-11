@@ -45,5 +45,4 @@ src/validate_results/cpp_outputs
 src/validate_results/test_data
 src/validate_results/__pycache__
 weights/*
-
 datasets/*
