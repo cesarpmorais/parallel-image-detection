@@ -61,3 +61,70 @@ python test_with_image.py ../../datasets/minha_imagem.jpeg
 
 **Nota:** Os dados de teste atuais são sintéticos (não uma imagem real), por isso as predições podem não fazer muito sentido. Para testar com imagem real, use `test_cavalo.py`.
 
+---
+
+## 📈 Benchmark com Múltiplas Imagens
+
+Para benchmarking em larga escala com validação automática, use o script `benchmark.py`:
+
+### Opção 1: Executar a partir do diretório do projeto (raiz)
+
+```bash
+# Validar 5 imagens e gerar relatório
+python src/validate_results/benchmark.py \
+  --bin cpp/build/resnet18 \
+  --images datasets \
+  --out benchmark_results.csv \
+  --max-images 5 \
+  --validate
+```
+
+### Parâmetros do benchmark.py
+
+```
+--bin <path>          Caminho do executável C++ (padrão: procura automaticamente)
+--images <path>       Diretório de imagens (padrão: datasets/)
+--out <path>          Arquivo CSV de saída (padrão: benchmark_results.csv)
+--max-images <n>      Limite de imagens a processar (0 = todas)
+-n <n>                Alias para --max-images
+--repeat <n>          Número de repetições por imagem (padrão: 1)
+--validate            Validar predições contra modelo PyTorch de referência
+--verbose             Mostrar informações de debug
+--timeout <s>         Timeout em segundos (padrão: 60)
+```
+
+### Exemplo de Saída
+
+```
+Found 5 images. Creating temp preprocessed inputs...
+Running C++ binary on 5 preprocessed images (--repeat 1)...
+C++ binary completed (wall time: 23583.0 ms)
+Results written to benchmark_validated.csv
+
+=== Validation Results ===
+Passed: 5/5
+  n01440764_tench.JPEG                     ✓ PASS     (ref=0, cpp=0)
+  n01443537_goldfish.JPEG                  ✓ PASS     (ref=1, cpp=1)
+  n01484850_great_white_shark.JPEG         ✓ PASS     (ref=2, cpp=2)
+  n01491361_tiger_shark.JPEG               ✓ PASS     (ref=3, cpp=3)
+  n01494475_hammerhead.JPEG                ✓ PASS     (ref=842, cpp=842)
+```
+
+### O que o Benchmark Faz
+
+1. **Preprocessa imagens** em formato `.bin` (normalização ImageNet)
+2. **Executa uma única vez** o binário C++ com todas as imagens
+3. **Coleta timings por camada** para análise de desempenho
+4. **Valida predições** (opcional) comparando contra PyTorch
+5. **Gera CSV** com resultados por imagem e por camada
+
+### Arquivo CSV de Saída
+
+O arquivo CSV contém:
+- `image`: Nome da imagem
+- `top1`: Classe prevista pelo C++
+- `valid`: Se a predição está correta (quando `--validate` ativado)
+- `layer_conv1`, `layer_bn1`, ..., `layer_total`: Timings por camada em ms
+
+Isso permite análise detalhada de performance e verificação de correção.
+
