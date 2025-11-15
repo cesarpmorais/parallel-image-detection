@@ -25,6 +25,7 @@ Tensor Conv2D::forward(const Tensor& input) const {
     output.zeros();
     
     // Para cada item do batch
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int b = 0; b < batch; ++b) {
         // Para cada canal de saída
         for (int oc = 0; oc < out_channels_; ++oc) {
