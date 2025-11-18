@@ -7,6 +7,7 @@ Processa imagem, executa C++, e mostra predições com nomes
 import numpy as np
 import os
 import sys
+import subprocess
 from PIL import Image
 import torch
 import torchvision.transforms as transforms
@@ -117,7 +118,7 @@ def main():
         # Testar com saída existente
         output = load_cpp_output()
         if output is None:
-            print("[ERRO] Execute primeiro: cd ../../cpp && .\\resnet18.exe")
+            print("[ERRO] Execute primeiro: cd ../../cpp && ./resnet18")
             return 1
         
         labels = download_imagenet_labels()
@@ -149,11 +150,18 @@ def main():
     print(f"\n[2] Salvando input para programa C++...")
     save_input_for_cpp(input_tensor)
     
-    print(f"\n[3] Execute o programa C++ agora:")
-    print(f"    cd ../../cpp")
-    print(f"    .\\resnet18.exe")
-    print(f"\n    Depois volte aqui e pressione Enter...")
-    input()
+    print(f"\n[3] Executando programa C++ automaticamente...")
+    cpp_exec_path = os.path.abspath("../../cpp/build/resnet18")
+    if not os.path.exists(cpp_exec_path):
+        print(f"[ERRO] Executável não encontrado em {cpp_exec_path}")
+        return 1
+
+    try:
+        subprocess.run([cpp_exec_path], check=True)
+        print("[OK] Execução do C++ concluída.")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERRO] Falha ao executar o C++: {e}")
+        return 1
     
     # Carregar saída do C++
     print(f"\n[4] Carregando saida do C++...")
@@ -161,7 +169,7 @@ def main():
     
     if output is None:
         print("[ERRO] Saida do C++ nao encontrada!")
-        print("Execute: cd ../../cpp && .\\resnet18.exe")
+        print("Execute: cd ../../cpp && ./resnet18")
         return 1
     
     # Carregar labels
@@ -228,4 +236,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
