@@ -1,3 +1,4 @@
 Versao,Tempo_total_segundos
-Sequencial (CPU),84.0806086119992
-Paralelo (OpenMP),22.357999486001063
+Sequencial (CPU),4496.5060763400015
+Paralelo (OpenMP),691.752262152997
+CUDA (GPU),88.24921522799923

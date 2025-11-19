@@ -42,6 +42,7 @@
 
 src/validate_results/reference_outputs
 src/validate_results/cpp_outputs
+src/validate_results/benchmark_inputs/*
 src/validate_results/test_data
 src/validate_results/__pycache__
 weights/*

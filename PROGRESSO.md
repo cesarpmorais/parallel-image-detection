@@ -63,7 +63,7 @@ com ênfase em **corretude numérica** e **ganho de desempenho**.
   4. Valida a corretude numérica (`MAE`, `MaxDiff`),  
   5. Gera gráfico comparativo de desempenho.  
 - **Script:** `benchmark_parallel_vs_sequential.py`.  
-- **Exemplo exec.:** `python benchmark_parallel_vs_sequential.py 10^C`.  
+- **Exemplo exec.:** `python benchmark_parallel_vs_sequential.py 10`.  
 - **Status:** ✅ Concluído.  
 - **Resultado:** Pipeline 100% automatizado, com resultados reprodutíveis e comparáveis.
 

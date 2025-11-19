@@ -21,10 +21,12 @@ import matplotlib.pyplot as plt
 
 
 # === CONFIGURAÇÕES DE PASTAS ===
+
 ROOT = os.path.abspath("../../")
 CPP_DIR = os.path.join(ROOT, "cpp")
 CPP_PAR_DIR = os.path.join(ROOT, "cpp_parallel")
-DATASET_DIR = os.path.join(ROOT, "datasets/imagenetmini-1000/imagenet-mini/train")
+CPP_CUDA_DIR = os.path.join(ROOT, "cpp_cuda")
+DATASET_DIR = os.path.join(ROOT, "datasets")
 INPUTS_DIR = os.path.join(ROOT, "src/validate_results/benchmark_inputs")
 RESULTS_CSV = os.path.join(ROOT, "src/validate_results/results_benchmark.csv")
 OUTPUTS_DIR = os.path.join(ROOT, "src/validate_results/cpp_outputs")
@@ -33,8 +35,14 @@ OUTPUTS_DIR = os.path.join(ROOT, "src/validate_results/cpp_outputs")
 # === FUNÇÕES AUXILIARES ===
 def run_cmd(cmd, cwd=None):
     """Executa comando shell e imprime saída"""
-    result = subprocess.run(cmd, cwd=cwd, shell=True, text=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = subprocess.run(
+        cmd,
+        cwd=cwd,
+        shell=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
     print(result.stdout)
     if result.returncode != 0:
         print(f"[ERRO] Falha ao executar comando: {cmd}")
@@ -68,7 +76,8 @@ def compile_project(project_path):
     # 2️⃣ Compilar
     run_cmd("make -j", cwd=build_dir)
 
-    exe_path = os.path.join(build_dir, "resnet18")
+    exe_name = "resnet18_cuda" if "cpp_cuda" in project_path else "resnet18"
+    exe_path = os.path.join(build_dir, exe_name)
     if not os.path.exists(exe_path):
         print(f"[ERRO] Executável não encontrado após compilação: {exe_path}")
         sys.exit(1)
@@ -79,13 +88,14 @@ def compile_project(project_path):
 
 def preprocess_image(image_path):
     """Aplica o mesmo pré-processamento usado na ResNet18"""
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
     image = Image.open(image_path).convert("RGB")
     tensor = transform(image).unsqueeze(0)
     return tensor
@@ -125,8 +135,8 @@ def generate_binaries(num_images):
     return INPUTS_DIR
 
 
-def run_executable(exec_path, inputs_dir, tag):
-    """Executa o binário C++ e mede tempo total"""
+def run_executable(exec_path, inputs_dir, tag, out_subdir):
+    """Executa o binário C++ e mede tempo total, move outputs to subdir"""
     if not os.path.exists(exec_path):
         print(f"[ERRO] Executável não encontrado: {exec_path}")
         return None
@@ -144,36 +154,50 @@ def run_executable(exec_path, inputs_dir, tag):
 
     total_time = end - start
     print(f"[OK] {tag} finalizado em {total_time:.2f}s")
+
+    # Move output files to subdir
+    os.makedirs(out_subdir, exist_ok=True)
+    for fname in os.listdir(OUTPUTS_DIR):
+        if (
+            fname.startswith("final_output_input_") and fname.endswith(".bin")
+        ) or fname == "timings.csv":
+            src = os.path.join(OUTPUTS_DIR, fname)
+            dst = os.path.join(out_subdir, fname)
+            try:
+                os.replace(src, dst)
+            except Exception as e:
+                print(f"[AVISO] Falha ao mover {fname}: {e}")
     return total_time
 
 
-def compare_outputs(seq_output_path, par_output_path):
-    """Compara os resultados binários entre as versões sequencial e paralela"""
-    if not (os.path.exists(seq_output_path) and os.path.exists(par_output_path)):
-        print("[AVISO] Arquivos de saída não encontrados para comparação.")
-        return
-
-    seq = np.fromfile(seq_output_path, dtype=np.float32)
-    par = np.fromfile(par_output_path, dtype=np.float32)
-
-    if seq.shape != par.shape:
-        print(f"[ERRO] Formatos diferentes: {seq.shape} vs {par.shape}")
-        return
-
-    abs_diff = np.abs(seq - par)
-    mae = abs_diff.mean()
-    max_diff = abs_diff.max()
-
-    print("\n" + "=" * 70)
-    print("  VALIDAÇÃO NUMÉRICA ENTRE SEQUENCIAL E PARALELA")
-    print("=" * 70)
-    print(f"Erro médio absoluto (MAE): {mae:.6e}")
-    print(f"Erro máximo (MaxDiff): {max_diff:.6e}")
-
-    if max_diff < 1e-5:
-        print("[OK] Resultados numericamente equivalentes ✅")
-    else:
-        print("[AVISO] Diferença detectada (>1e-5) ⚠️")
+def compare_outputs(dir_a, dir_b, num_images):
+    """Compara os resultados binários entre duas versões para todos inputs"""
+    ok = True
+    for i in range(1, num_images + 1):
+        fname = f"final_output_input_{i:03d}.bin"
+        path_a = os.path.join(dir_a, fname)
+        path_b = os.path.join(dir_b, fname)
+        if not (os.path.exists(path_a) and os.path.exists(path_b)):
+            print(f"[AVISO] Arquivos não encontrados para input {i}: {fname}")
+            ok = False
+            continue
+        arr_a = np.fromfile(path_a, dtype=np.float32)
+        arr_b = np.fromfile(path_b, dtype=np.float32)
+        if arr_a.shape != arr_b.shape:
+            print(
+                f"[ERRO] Formatos diferentes para {fname}: {arr_a.shape} vs {arr_b.shape}"
+            )
+            ok = False
+            continue
+        abs_diff = np.abs(arr_a - arr_b)
+        mae = abs_diff.mean()
+        max_diff = abs_diff.max()
+        print(f"Input {i:03d}: MAE={mae:.6e}, MaxDiff={max_diff:.6e}")
+        if max_diff >= 1e-5:
+            print(f"[AVISO] Diferença detectada (>1e-5) para {fname} ⚠️")
+            ok = False
+    if ok:
+        print("[OK] Todos os outputs numericamente equivalentes ✅")
 
 
 def save_results_to_csv(results):
@@ -199,12 +223,18 @@ def plot_results(results):
     plt.grid(axis="y", linestyle="--", alpha=0.7)
 
     for bar, t in zip(bars, times):
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
-                 f"{t:.2f}s", ha="center", va="bottom", fontsize=10)
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.1,
+            f"{t:.2f}s",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
 
     plt.tight_layout()
     plt.savefig(os.path.join(os.path.dirname(RESULTS_CSV), "benchmark_results.png"))
-    plt.show()
+    plt.close()  # Close figure to free memory
     print("[OK] Gráfico salvo como benchmark_results.png")
 
 
@@ -222,24 +252,34 @@ def main():
     # 1️⃣ Gerar binários de entrada
     inputs_dir = generate_binaries(num_images)
 
-    # 2️⃣ Compilar ambos os projetos
+    # 2️⃣ Compilar todos os projetos
     exe_seq = compile_project(CPP_DIR)
     exe_par = compile_project(CPP_PAR_DIR)
+    exe_cuda = compile_project(CPP_CUDA_DIR)
 
-    # 3️⃣ Executar ambos
+    # 3️⃣ Executar todos
     results = {}
-    seq_time = run_executable(exe_seq, inputs_dir, "Sequencial (CPU)")
+    cpu_dir = os.path.join(OUTPUTS_DIR, "cpu")
+    omp_dir = os.path.join(OUTPUTS_DIR, "openmp")
+    cuda_dir = os.path.join(OUTPUTS_DIR, "cuda")
+
+    seq_time = run_executable(exe_seq, inputs_dir, "Sequencial (CPU)", cpu_dir)
     if seq_time is not None:
         results["Sequencial (CPU)"] = seq_time
 
-    par_time = run_executable(exe_par, inputs_dir, "Paralelo (OpenMP)")
+    par_time = run_executable(exe_par, inputs_dir, "Paralelo (OpenMP)", omp_dir)
     if par_time is not None:
         results["Paralelo (OpenMP)"] = par_time
 
+    cuda_time = run_executable(exe_cuda, inputs_dir, "CUDA (GPU)", cuda_dir)
+    if cuda_time is not None:
+        results["CUDA (GPU)"] = cuda_time
+
     # 4️⃣ Comparar resultados numéricos (corretude)
-    seq_out = os.path.join(OUTPUTS_DIR, "final_output.bin")
-    par_out = os.path.join(OUTPUTS_DIR, "final_output.bin")  # ambos salvam no mesmo lugar
-    compare_outputs(seq_out, par_out)
+    print("\n[Corretude] CPU vs OpenMP:")
+    compare_outputs(cpu_dir, omp_dir, num_images)
+    print("\n[Corretude] CPU vs CUDA:")
+    compare_outputs(cpu_dir, cuda_dir, num_images)
 
     # 5️⃣ Salvar e plotar resultados
     save_results_to_csv(results)

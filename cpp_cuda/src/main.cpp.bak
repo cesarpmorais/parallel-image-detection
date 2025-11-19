@@ -277,8 +277,7 @@ int main(int argc, char **argv)
             Tensor final_output = fc.forward(after_avgpool);
             auto t_fc1 = Clock::now();
             img_timings.emplace_back("fc", ms(t_fc1 - t_fc0).count());
-            // Save final output for validation
-            final_output.save_to_bin(std::string(OUTPUT_DIR) + "/final_output_" + stem + ".bin");
+            final_output.save_to_bin(std::string(OUTPUT_DIR) + "/final_output.bin");
             final_output.save_shape_to_txt(std::string(OUTPUT_DIR) + "/final_output_shape.txt");
 
             double total = 0.0;
