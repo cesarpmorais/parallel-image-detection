@@ -308,14 +308,7 @@ void Tensor::save_to_bin(const std::string &filename) const
         throw std::runtime_error("Could not open file for writing: " + filename);
     }
 
-    // Write shape size
-    int shape_size = shape.size();
-    file.write(reinterpret_cast<const char *>(&shape_size), sizeof(int));
-
-    // Write shape
-    file.write(reinterpret_cast<const char *>(shape.data()), shape_size * sizeof(int));
-
-    // Write data
+    // Write only raw data (like CPU version, for compatibility with benchmark)
     file.write(reinterpret_cast<const char *>(data.data()), num_elements * sizeof(float));
 
     if (!file)

@@ -158,7 +158,9 @@ def run_executable(exec_path, inputs_dir, tag, out_subdir):
     # Move output files to subdir
     os.makedirs(out_subdir, exist_ok=True)
     for fname in os.listdir(OUTPUTS_DIR):
-        if fname.startswith("final_output_input_") and fname.endswith(".bin"):
+        if (
+            fname.startswith("final_output_input_") and fname.endswith(".bin")
+        ) or fname == "timings.csv":
             src = os.path.join(OUTPUTS_DIR, fname)
             dst = os.path.join(out_subdir, fname)
             try:
@@ -232,7 +234,7 @@ def plot_results(results):
 
     plt.tight_layout()
     plt.savefig(os.path.join(os.path.dirname(RESULTS_CSV), "benchmark_results.png"))
-    plt.show()
+    plt.close()  # Close figure to free memory
     print("[OK] Gráfico salvo como benchmark_results.png")
 
 
