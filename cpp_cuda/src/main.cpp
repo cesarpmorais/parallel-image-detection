@@ -136,7 +136,8 @@ int main(int argc, char **argv)
 
     std::cout << "\n[2] Creating and loading layers..." << std::endl;
     Conv2D conv1(3, 64, 7, 2, 3);
-    if (!conv1.load_weights(std::string(WEIGHTS_DIR) + "/conv1_weight.bin"))
+    std::string conv1_path = std::string(WEIGHTS_DIR) + "/conv1_weight.bin";
+    if (!conv1.load_weights(conv1_path))
     {
         std::cerr << "Error: Failed to load conv1 weights" << std::endl;
         return 1;
@@ -187,15 +188,38 @@ int main(int argc, char **argv)
         const std::string bin_path = inputs[idx];
         std::string fname = bin_path.substr(bin_path.find_last_of('/') + 1);
         std::string stem = fname.substr(0, fname.find_last_of('.'));
-        std::string shape_path = std::string(TEST_DATA_DIR) + "/input_shape.txt";
 
         std::cout << "Processing [" << (idx + 1) << "/" << inputs.size() << "] " << fname << std::endl;
 
         for (int r = 0; r < repeat; ++r)
         {
-            Tensor input;
-            input.load_shape_from_txt(shape_path);
-            input.load_from_bin(bin_path);
+            // Create input tensor with expected shape: (1, 3, 224, 224)
+            Tensor input(1, 3, 224, 224);
+
+            // Load raw float data
+            std::ifstream input_file(bin_path, std::ios::binary);
+            if (!input_file.is_open())
+            {
+                std::cerr << "Error: Failed to open input file: " << bin_path << std::endl;
+                return 1;
+            }
+
+            // Check file size
+            input_file.seekg(0, std::ios::end);
+            size_t file_size = input_file.tellg();
+            input_file.seekg(0, std::ios::beg);
+
+            size_t expected_size = input.numel() * sizeof(float);
+            if (file_size != expected_size)
+            {
+                std::cerr << "Error: Input file size mismatch. Expected " << expected_size
+                          << " bytes, got " << file_size << " bytes" << std::endl;
+                return 1;
+            }
+
+            // Read raw float data
+            input_file.read(reinterpret_cast<char *>(input.data_ptr()), file_size);
+            input_file.close();
 
             std::vector<std::pair<std::string, double>> img_timings;
 
@@ -277,9 +301,9 @@ int main(int argc, char **argv)
             Tensor final_output = fc.forward(after_avgpool);
             auto t_fc1 = Clock::now();
             img_timings.emplace_back("fc", ms(t_fc1 - t_fc0).count());
+
             // Save final output for validation
             final_output.save_to_bin(std::string(OUTPUT_DIR) + "/final_output_" + stem + ".bin");
-            final_output.save_shape_to_txt(std::string(OUTPUT_DIR) + "/final_output_shape.txt");
 
             double total = 0.0;
             for (const auto &p : img_timings)
@@ -299,6 +323,6 @@ int main(int argc, char **argv)
         }
     }
 
-    std::cout << "Processing complete. Outputs and timings written to: " << OUTPUT_DIR << std::endl;
+    std::cout << "Processing complete." << std::endl;
     return 0;
 }
