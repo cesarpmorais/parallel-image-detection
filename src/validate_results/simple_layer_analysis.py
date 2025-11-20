@@ -37,27 +37,32 @@ def load_timing_data():
                     # Check for negative timings and convert them to positive
                     negative_timings = df[df["time_ms"] < 0]
                     negative_count = len(negative_timings)
-                    
+
                     if negative_count > 0:
-                        print(f"[INFO] Converting {negative_count} negative timing(s) to positive in {impl}:")
+                        print(
+                            f"[INFO] Converting {negative_count} negative timing(s) to positive in {impl}:"
+                        )
                         for _, row in negative_timings.iterrows():
-                            print(f"  {row['layer']}: {row['time_ms']:.3f} ms -> {abs(row['time_ms']):.3f} ms")
-                    
+                            print(
+                                f"  {row['layer']}: {row['time_ms']:.3f} ms -> {abs(row['time_ms']):.3f} ms"
+                            )
+
                     # Filter out 'total' row and any empty/invalid rows
                     df_clean = df[
-                        (df["layer"] != "total") & 
-                        (df["layer"].notna()) & 
-                        (df["layer"] != "")
+                        (df["layer"] != "total")
+                        & (df["layer"].notna())
+                        & (df["layer"] != "")
                     ].copy()
-                    
+
                     # Convert negative timings to positive
                     df_clean["time_ms"] = df_clean["time_ms"].abs()
-                    
+
                     df_converted = pd.DataFrame(
                         {
                             "layer_name": df_clean["layer"],
                             "image_id": 1,
-                            "duration_us": df_clean["time_ms"] * 1000,  # Convert ms to microseconds
+                            "duration_us": df_clean["time_ms"]
+                            * 1000,  # Convert ms to microseconds
                         }
                     )
                     data[impl] = df_converted
